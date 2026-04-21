@@ -1,0 +1,108 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../base
+
+namespace: dev-cluster
+
+labels:
+- pairs:
+    environment: dev
+  includeSelectors: false
+
+patches:
+# ClusterDeployment
+- target:
+    kind: ClusterDeployment
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: dev-cluster
+    - op: replace
+      path: /spec/clusterName
+      value: dev-cluster
+    - op: replace
+      path: /spec/baseDomain
+      value: dev.example.com
+
+# MachinePool — 2 workers for dev
+- target:
+    kind: MachinePool
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: dev-cluster-worker
+    - op: replace
+      path: /spec/clusterDeploymentRef/name
+      value: dev-cluster
+    - op: replace
+      path: /spec/replicas
+      value: 2
+
+# ManagedCluster — dev labels
+- target:
+    kind: ManagedCluster
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: dev-cluster
+    - op: replace
+      path: /metadata/labels/environment
+      value: dev
+    - op: replace
+      path: /metadata/labels/name
+      value: dev-cluster
+    - op: add
+      path: /metadata/labels/pci-compliant
+      value: "false"
+
+# KlusterletAddonConfig
+- target:
+    kind: KlusterletAddonConfig
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: dev-cluster
+    - op: replace
+      path: /spec/clusterName
+      value: dev-cluster
+    - op: replace
+      path: /spec/clusterNamespace
+      value: dev-cluster
+
+# install-config Secret
+- target:
+    kind: Secret
+    name: install-config
+  patch: |-
+    - op: replace
+      path: /stringData/install-config.yaml
+      value: |
+        apiVersion: v1
+        metadata:
+          name: dev-cluster
+        baseDomain: dev.example.com
+        controlPlane:
+          name: master
+          replicas: 3
+          platform:
+            aws:
+              type: m5.2xlarge
+        compute:
+        - name: worker
+          replicas: 2
+          platform:
+            aws:
+              type: m5.xlarge
+        networking:
+          networkType: OVNKubernetes
+          clusterNetwork:
+          - cidr: 10.128.0.0/14
+            hostPrefix: 23
+          serviceNetwork:
+          - 172.30.0.0/16
+        platform:
+          aws:
+            region: us-east-1
+        pullSecret: 'REPLACE_ME'
+        sshKey: 'REPLACE_ME'

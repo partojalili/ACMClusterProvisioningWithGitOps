@@ -1,0 +1,14 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: developer
+rules:
+- apiGroups: ["", "apps", "extensions"]
+  resources: [pods, services, deployments, replicasets, configmaps, secrets, routes, persistentvolumeclaims]
+  verbs: [get, list, watch]
+- apiGroups: ["", "apps"]
+  resources: [deployments, services, configmaps, secrets]
+  verbs: [create, update, patch, delete]
+- apiGroups: [route.openshift.io]
+  resources: [routes]
+  verbs: [create, update, patch, delete]

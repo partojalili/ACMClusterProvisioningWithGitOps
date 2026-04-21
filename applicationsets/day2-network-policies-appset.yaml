@@ -1,0 +1,32 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: day2-network-policies
+  namespace: openshift-gitops
+spec:
+  generators:
+    - clusterDecisionResource:
+        configMapRef: acm-placement
+        labelSelector:
+          matchLabels:
+            cluster.open-cluster-management.io/placement: gitops-placement
+            pci-compliant: "true"
+        requeueAfterSeconds: 180
+  template:
+    metadata:
+      name: '{{name}}-network-policies'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/YOUR_ORG/ACMClusterProvisioningWithGitOps.git
+        targetRevision: HEAD
+        path: day2-config/network-policies
+      destination:
+        server: '{{server}}'
+        namespace: baseline-policies
+      syncPolicy:
+        automated:
+          selfHeal: true
+          prune: true
+        syncOptions:
+          - CreateNamespace=true

@@ -1,0 +1,122 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- ../../base
+
+namespace: prod-cluster
+
+labels:
+- pairs:
+    environment: prod
+  includeSelectors: false
+
+patches:
+# ClusterDeployment — us-west-2 for prod
+- target:
+    kind: ClusterDeployment
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: prod-cluster
+    - op: replace
+      path: /spec/clusterName
+      value: prod-cluster
+    - op: replace
+      path: /spec/baseDomain
+      value: prod.example.com
+    - op: replace
+      path: /spec/platform/aws/region
+      value: us-west-2
+
+# MachinePool — larger instances, autoscaling
+- target:
+    kind: MachinePool
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: prod-cluster-worker
+    - op: replace
+      path: /spec/clusterDeploymentRef/name
+      value: prod-cluster
+    - op: replace
+      path: /spec/platform/aws/type
+      value: m5.2xlarge
+    - op: replace
+      path: /spec/replicas
+      value: 5
+    - op: add
+      path: /spec/autoscaling
+      value:
+        minReplicas: 3
+        maxReplicas: 8
+
+# ManagedCluster — prod labels, PCI compliant
+- target:
+    kind: ManagedCluster
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: prod-cluster
+    - op: replace
+      path: /metadata/labels/environment
+      value: prod
+    - op: replace
+      path: /metadata/labels/region
+      value: us-west-2
+    - op: replace
+      path: /metadata/labels/name
+      value: prod-cluster
+    - op: add
+      path: /metadata/labels/pci-compliant
+      value: "true"
+
+# KlusterletAddonConfig
+- target:
+    kind: KlusterletAddonConfig
+  patch: |-
+    - op: replace
+      path: /metadata/name
+      value: prod-cluster
+    - op: replace
+      path: /spec/clusterName
+      value: prod-cluster
+    - op: replace
+      path: /spec/clusterNamespace
+      value: prod-cluster
+
+# install-config Secret — larger instances, us-west-2
+- target:
+    kind: Secret
+    name: install-config
+  patch: |-
+    - op: replace
+      path: /stringData/install-config.yaml
+      value: |
+        apiVersion: v1
+        metadata:
+          name: prod-cluster
+        baseDomain: prod.example.com
+        controlPlane:
+          name: master
+          replicas: 3
+          platform:
+            aws:
+              type: m5.4xlarge
+        compute:
+        - name: worker
+          replicas: 5
+          platform:
+            aws:
+              type: m5.2xlarge
+        networking:
+          networkType: OVNKubernetes
+          clusterNetwork:
+          - cidr: 10.128.0.0/14
+            hostPrefix: 23
+          serviceNetwork:
+          - 172.30.0.0/16
+        platform:
+          aws:
+            region: us-west-2
+        pullSecret: 'REPLACE_ME'
+        sshKey: 'REPLACE_ME'

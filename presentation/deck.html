@@ -1,0 +1,1007 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Fleet Management at Scale: Declarative OpenShift Cluster Provisioning with GitOps</title>
+  <link href="https://cdn.jsdelivr.net/npm/@rhds/tokens@3.0.2/css/global.min.css" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Red+Hat+Display:wght@400;500;700;900&family=Red+Hat+Text:wght@400;500;700&family=Red+Hat+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <style>
+    /* === RESET & BASE === */
+    :root { color-scheme: light; }
+    *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+    /* === COLOR VARIABLES — Core Light === */
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f2f2f2;
+      --bg-surface: #e0e0e0;
+      --text-primary: #151515;
+      --text-secondary: #4d4d4d;
+      --text-muted: #707070;
+      --accent: #ee0000;
+      --accent-dark: #a60000;
+      --accent-light: #f56e6e;
+      --tag-border: #c7c7c7;
+      --icon-filter: none;
+      --icon-filter-accent: invert(12%) sepia(100%) saturate(10000%) hue-rotate(0deg) brightness(95%);
+
+      --font-display: var(--rh-font-family-heading, 'Red Hat Display', sans-serif);
+      --font-body: var(--rh-font-family-body-text, 'Red Hat Text', sans-serif);
+      --font-mono: var(--rh-font-family-code, 'Red Hat Mono', monospace);
+    }
+
+    body {
+      font-family: var(--font-body);
+      background: var(--bg-primary);
+      color: var(--text-primary);
+      overflow: hidden;
+      height: 100vh;
+      width: 100vw;
+    }
+
+    /* === SLIDE CONTAINER === */
+    .deck { position: relative; width: 100%; height: 100vh; }
+
+    .slide {
+      display: none;
+      flex-direction: column;
+      justify-content: center;
+      width: 100%;
+      height: 100vh;
+      padding: var(--rh-space-4xl, 80px) var(--rh-space-3xl, 64px);
+      position: relative;
+      overflow: hidden;
+    }
+    .slide.active { display: flex; }
+
+    .slide::before {
+      content: '';
+      position: absolute;
+      top: -20%;
+      right: -10%;
+      width: 60%;
+      height: 60%;
+      background: radial-gradient(ellipse, rgba(238,0,0,0.04) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+    .slide:nth-child(even)::before {
+      top: auto;
+      bottom: -20%;
+      right: auto;
+      left: -10%;
+    }
+
+    .slide > * { position: relative; z-index: 1; }
+
+    .slide-alt { background: var(--bg-secondary); }
+
+    /* === TYPOGRAPHY === */
+    h1 {
+      font-family: var(--font-display);
+      font-size: var(--rh-font-size-heading-2xl, 3rem);
+      font-weight: 900;
+      line-height: 1.1;
+      color: var(--text-primary);
+      max-width: 900px;
+    }
+    h2 {
+      font-family: var(--font-display);
+      font-size: var(--rh-font-size-heading-lg, 2rem);
+      font-weight: 700;
+      line-height: 1.2;
+      color: var(--text-primary);
+      max-width: 900px;
+      margin-bottom: var(--rh-space-lg, 24px);
+    }
+    h3 {
+      font-family: var(--font-display);
+      font-size: var(--rh-font-size-heading-md, 1.5rem);
+      font-weight: 700;
+      color: var(--text-primary);
+      margin-bottom: var(--rh-space-md, 16px);
+    }
+    .subtitle {
+      font-family: var(--font-body);
+      font-size: var(--rh-font-size-body-text-xl, 1.25rem);
+      color: var(--text-secondary);
+      max-width: 700px;
+      line-height: 1.6;
+      margin-top: var(--rh-space-lg, 24px);
+    }
+    .accent { color: var(--accent); }
+    .body-text {
+      font-size: var(--rh-font-size-body-text-lg, 1.125rem);
+      color: var(--text-secondary);
+      line-height: 1.7;
+      max-width: 800px;
+    }
+
+    /* === BREADCRUMB === */
+    .breadcrumb {
+      display: flex;
+      align-items: center;
+      margin-bottom: var(--rh-space-2xl, 48px);
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-xs, 0.75rem);
+      color: var(--text-muted);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+    }
+    .breadcrumb span { margin-left: var(--rh-space-sm, 8px); }
+
+    /* === SLIDE LABEL === */
+    .slide-label {
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-xs, 0.75rem);
+      color: var(--accent);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      margin-bottom: var(--rh-space-md, 16px);
+      font-weight: 500;
+    }
+
+    /* === LOGO === */
+    .rh-logo { height: 28px; width: auto; }
+    .rh-logo.small { height: 20px; }
+    .rh-logo.large { height: 40px; }
+
+    /* === ICON STYLES === */
+    .rh-icon {
+      height: 48px;
+      width: 48px;
+      filter: var(--icon-filter);
+      vertical-align: middle;
+    }
+    .rh-icon.small { height: 24px; width: 24px; }
+    .rh-icon.medium { height: 48px; width: 48px; }
+    .rh-icon.large { height: 64px; width: 64px; }
+    .rh-icon.xl { height: 96px; width: 96px; }
+    .rh-icon.accent { filter: var(--icon-filter-accent); }
+
+    /* === TAGS === */
+    .tags { display: flex; flex-wrap: wrap; gap: var(--rh-space-sm, 8px); margin-top: var(--rh-space-lg, 24px); }
+    .tag {
+      display: inline-block;
+      padding: var(--rh-space-xs, 4px) var(--rh-space-md, 16px);
+      border: var(--rh-border-width-sm, 1px) solid var(--tag-border);
+      border-radius: var(--rh-border-radius-pill, 64px);
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-xs, 0.75rem);
+      letter-spacing: 0.05em;
+      text-transform: uppercase;
+      color: var(--text-secondary);
+    }
+    .tag.accent { border-color: var(--accent); color: var(--accent); }
+
+    /* === ATTRIBUTION === */
+    .attribution {
+      font-family: var(--font-body);
+      font-size: var(--rh-font-size-body-text-sm, 0.875rem);
+      color: var(--text-muted);
+      margin-top: auto;
+      padding-top: var(--rh-space-2xl, 48px);
+    }
+    .source {
+      font-family: var(--font-body);
+      font-size: var(--rh-font-size-body-text-xs, 0.75rem);
+      color: var(--text-muted);
+      margin-top: auto;
+      padding-top: var(--rh-space-lg, 24px);
+    }
+
+    /* === BIG NUMBER === */
+    .big-number {
+      font-family: var(--font-display);
+      font-size: 6rem;
+      font-weight: 900;
+      color: var(--accent);
+      line-height: 1;
+    }
+    .big-number-context {
+      font-family: var(--font-body);
+      font-size: var(--rh-font-size-body-text-xl, 1.25rem);
+      color: var(--text-secondary);
+      margin-top: var(--rh-space-md, 16px);
+      max-width: 600px;
+    }
+
+    /* === FEATURE LIST === */
+    .feature-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: var(--rh-space-lg, 24px);
+      margin-top: var(--rh-space-lg, 24px);
+    }
+    .feature-list li {
+      display: flex;
+      align-items: flex-start;
+      gap: var(--rh-space-md, 16px);
+      font-size: var(--rh-font-size-body-text-lg, 1.125rem);
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+    .feature-list li strong {
+      color: var(--text-primary);
+      font-weight: 700;
+    }
+
+    /* === TWO COLUMN === */
+    .two-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: var(--rh-space-2xl, 48px);
+      margin-top: var(--rh-space-lg, 24px);
+      width: 100%;
+      max-width: 1100px;
+    }
+    .col { display: flex; flex-direction: column; gap: var(--rh-space-md, 16px); }
+    .col h3 { font-size: var(--rh-font-size-heading-sm, 1.25rem); }
+
+    /* === THREE COLUMN === */
+    .three-col {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: var(--rh-space-xl, 32px);
+      margin-top: var(--rh-space-lg, 24px);
+      width: 100%;
+      max-width: 1100px;
+    }
+
+    /* === ARCHITECTURE DIAGRAM === */
+    .arch-diagram {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--rh-space-md, 16px);
+      margin-top: var(--rh-space-xl, 32px);
+      width: 100%;
+      max-width: 1000px;
+    }
+    .arch-row {
+      display: flex;
+      align-items: center;
+      gap: var(--rh-space-md, 16px);
+      width: 100%;
+      justify-content: center;
+    }
+    .arch-box {
+      background: rgba(242,242,242,0.8);
+      border: 1px solid #c7c7c7;
+      border-radius: var(--rh-border-radius-default, 3px);
+      padding: var(--rh-space-md, 16px) var(--rh-space-lg, 24px);
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-sm, 0.875rem);
+      color: var(--text-primary);
+      text-align: center;
+      min-width: 140px;
+      box-shadow: var(--rh-box-shadow-sm, 0 2px 4px 0 rgba(21,21,21,0.2));
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--rh-space-xs, 4px);
+    }
+    .arch-box.highlight {
+      border-color: var(--accent);
+      border-width: 2px;
+      background: rgba(252,227,227,0.5);
+    }
+    .arch-box .arch-label {
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: var(--rh-font-size-body-text-md, 1rem);
+    }
+    .arch-box .arch-sub {
+      font-family: var(--font-body);
+      font-size: var(--rh-font-size-body-text-xs, 0.75rem);
+      color: var(--text-muted);
+    }
+    .arch-arrow {
+      font-size: 1.5rem;
+      color: var(--text-muted);
+      font-weight: 700;
+    }
+    .arch-arrow-down {
+      font-size: 1.5rem;
+      color: var(--text-muted);
+      font-weight: 700;
+      text-align: center;
+    }
+    .arch-group {
+      display: flex;
+      gap: var(--rh-space-md, 16px);
+    }
+    .arch-bracket {
+      border: 1px dashed #c7c7c7;
+      border-radius: var(--rh-border-radius-default, 3px);
+      padding: var(--rh-space-md, 16px);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--rh-space-sm, 8px);
+    }
+    .arch-bracket-label {
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-xs, 0.75rem);
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    /* === CODE BLOCK === */
+    .code-block {
+      background: var(--bg-secondary);
+      border: 1px solid var(--tag-border);
+      border-radius: var(--rh-border-radius-default, 3px);
+      padding: var(--rh-space-lg, 24px);
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-sm, 0.875rem);
+      color: var(--text-primary);
+      line-height: 1.6;
+      overflow-x: auto;
+      max-width: 800px;
+      white-space: pre;
+    }
+    .code-block .code-comment { color: var(--text-muted); }
+    .code-block .code-key { color: var(--accent-dark); font-weight: 700; }
+    .code-block .code-value { color: #147878; }
+
+    /* === CARD === */
+    .card {
+      background: var(--bg-primary);
+      border: 1px solid var(--tag-border);
+      border-radius: var(--rh-border-radius-default, 3px);
+      padding: var(--rh-space-lg, 24px);
+      box-shadow: var(--rh-box-shadow-sm, 0 2px 4px 0 rgba(21,21,21,0.2));
+    }
+    .card h3 {
+      font-size: var(--rh-font-size-heading-sm, 1.25rem);
+      margin-bottom: var(--rh-space-sm, 8px);
+    }
+    .card p {
+      font-size: var(--rh-font-size-body-text-md, 1rem);
+      color: var(--text-secondary);
+      line-height: 1.5;
+    }
+
+    /* === WORKFLOW STEPS === */
+    .workflow {
+      display: flex;
+      align-items: center;
+      gap: var(--rh-space-md, 16px);
+      margin-top: var(--rh-space-xl, 32px);
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 1100px;
+    }
+    .workflow-step {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: var(--rh-space-sm, 8px);
+      text-align: center;
+      min-width: 120px;
+      max-width: 150px;
+    }
+    .workflow-step .step-num {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: white;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-weight: 700;
+      font-size: var(--rh-font-size-body-text-md, 1rem);
+    }
+    .workflow-step .step-label {
+      font-family: var(--font-body);
+      font-size: var(--rh-font-size-body-text-sm, 0.875rem);
+      color: var(--text-secondary);
+      line-height: 1.4;
+    }
+    .workflow-arrow {
+      font-size: 1.5rem;
+      color: var(--accent);
+      font-weight: 700;
+    }
+
+    /* === QUOTE === */
+    .quote-mark {
+      font-family: var(--font-display);
+      font-size: 5rem;
+      color: var(--accent);
+      opacity: 0.3;
+      line-height: 1;
+      margin-bottom: -24px;
+    }
+    .quote-text {
+      font-family: var(--font-display);
+      font-size: var(--rh-font-size-heading-md, 1.5rem);
+      font-weight: 500;
+      color: var(--text-primary);
+      line-height: 1.5;
+      max-width: 800px;
+    }
+
+    /* === LOGO FOOTER === */
+    .logo-footer {
+      margin-top: auto;
+      padding-top: var(--rh-space-2xl, 48px);
+      display: flex;
+      justify-content: flex-start;
+    }
+
+    /* === DEMO SLIDE === */
+    .demo-slide {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .demo-slide h1 {
+      font-size: 4rem;
+      max-width: none;
+    }
+    .demo-slide .subtitle {
+      text-align: center;
+      max-width: none;
+    }
+
+    /* === THANK YOU === */
+    .thank-you {
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+    }
+    .thank-you h1 {
+      font-size: 4.5rem;
+      max-width: none;
+    }
+    .thank-you .attribution {
+      text-align: center;
+      margin-top: var(--rh-space-xl, 32px);
+      padding-top: 0;
+    }
+    .thank-you .logo-footer {
+      justify-content: center;
+      margin-top: var(--rh-space-2xl, 48px);
+    }
+    .thank-you::before {
+      top: -10%;
+      right: 20%;
+      width: 60%;
+      height: 60%;
+      background: radial-gradient(ellipse, rgba(238,0,0,0.06) 0%, transparent 70%);
+    }
+
+    /* === CONTROLS === */
+    .controls {
+      position: fixed;
+      bottom: var(--rh-space-lg, 24px);
+      right: var(--rh-space-xl, 32px);
+      display: flex;
+      align-items: center;
+      gap: var(--rh-space-lg, 24px);
+      z-index: 100;
+    }
+    .nav-hint {
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-xs, 0.75rem);
+      color: var(--text-muted);
+      opacity: 0.6;
+    }
+    .progress {
+      font-family: var(--font-mono);
+      font-size: var(--rh-font-size-body-text-sm, 0.875rem);
+      color: var(--text-muted);
+    }
+    .progress .current { color: var(--accent); font-weight: 700; }
+
+    /* === NOTES PANEL === */
+    .notes-panel {
+      position: fixed;
+      bottom: 0;
+      left: 0;
+      right: 0;
+      background: var(--bg-secondary);
+      border-top: 2px solid var(--tag-border);
+      padding: var(--rh-space-lg, 24px) var(--rh-space-3xl, 64px);
+      font-family: var(--font-body);
+      font-size: var(--rh-font-size-body-text-sm, 0.875rem);
+      color: var(--text-secondary);
+      line-height: 1.6;
+      max-height: 30vh;
+      overflow-y: auto;
+      transform: translateY(100%);
+      transition: transform 0.3s ease;
+      z-index: 99;
+    }
+    .notes-panel.visible { transform: translateY(0); }
+
+    /* === ANIMATIONS === */
+    .slide.active .animate-in {
+      animation: fadeSlideUp 0.6s ease-out forwards;
+      opacity: 0;
+    }
+    .slide.active .animate-in:nth-child(1) { animation-delay: 0s; }
+    .slide.active .animate-in:nth-child(2) { animation-delay: 0.1s; }
+    .slide.active .animate-in:nth-child(3) { animation-delay: 0.2s; }
+    .slide.active .animate-in:nth-child(4) { animation-delay: 0.3s; }
+    .slide.active .animate-in:nth-child(5) { animation-delay: 0.4s; }
+    .slide.active .animate-in:nth-child(6) { animation-delay: 0.5s; }
+    .slide.active .animate-in:nth-child(7) { animation-delay: 0.6s; }
+    .slide.active .animate-in:nth-child(8) { animation-delay: 0.7s; }
+
+    @keyframes fadeSlideUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    /* === RESPONSIVE === */
+    @media (max-width: 768px) {
+      .slide { padding: var(--rh-space-xl, 32px) var(--rh-space-lg, 24px); }
+      h1 { font-size: 2rem; }
+      h2 { font-size: 1.5rem; }
+      .two-col, .three-col { grid-template-columns: 1fr; }
+      .arch-row { flex-direction: column; }
+      .workflow { flex-direction: column; }
+      .big-number { font-size: 4rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="deck">
+
+    <!-- SLIDE 1: TITLE -->
+    <div class="slide" data-notes="Arrow keys or click to navigate. Press 'N' to toggle contextual notes with references, links, and additional context for each slide. Works in any modern browser — share the HTML file directly. For best results, use fullscreen (F11).">
+      <div class="breadcrumb animate-in">
+        <svg class="rh-logo small" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 613 145" role="img" aria-label="Red Hat">
+          <title>Red Hat</title>
+          <path d="M127.47,83.49c12.51,0,30.61-2.58,30.61-17.46a14,14,0,0,0-.31-3.42l-7.45-32.36c-1.72-7.12-3.23-10.35-15.73-16.6C124.89,8.69,103.76.5,97.51.5,91.69.5,90,8,83.06,8c-6.68,0-11.64-5.6-17.89-5.6-6,0-9.91,4.09-12.93,12.5,0,0-8.41,23.72-9.49,27.16A6.43,6.43,0,0,0,42.53,44c0,9.22,36.3,39.45,84.94,39.45M160,72.07c1.73,8.19,1.73,9.05,1.73,10.13,0,14-15.74,21.77-36.43,21.77C78.54,104,37.58,76.6,37.58,58.49a18.45,18.45,0,0,1,1.51-7.33C22.27,52,.5,55,.5,74.22c0,31.48,74.59,70.28,133.65,70.28,45.28,0,56.7-20.48,56.7-36.65,0-12.72-11-27.16-30.83-35.78" fill="#e00"/>
+          <path d="M160,72.07c1.73,8.19,1.73,9.05,1.73,10.13,0,14-15.74,21.77-36.43,21.77C78.54,104,37.58,76.6,37.58,58.49a18.45,18.45,0,0,1,1.51-7.33l3.66-9.06A6.43,6.43,0,0,0,42.53,44c0,9.22,36.3,39.45,84.94,39.45,12.51,0,30.61-2.58,30.61-17.46a14,14,0,0,0-.31-3.42Z"/>
+          <path d="M579.74,92.8c0,11.89,7.15,17.67,20.19,17.67a52.11,52.11,0,0,0,11.89-1.68V95a24.84,24.84,0,0,1-7.68,1.16c-5.37,0-7.36-1.68-7.36-6.73V68.3h15.56V54.1H596.78v-18l-17,3.68V54.1H568.49V68.3h11.25Zm-53,.32c0-3.68,3.69-5.47,9.26-5.47a43.12,43.12,0,0,1,10.1,1.26v7.15a21.51,21.51,0,0,1-10.63,2.63c-5.46,0-8.73-2.1-8.73-5.57m5.2,17.56c6,0,10.84-1.26,15.36-4.31v3.37h16.82V74.08c0-13.56-9.14-21-24.39-21-8.52,0-16.94,2-26,6.1l6.1,12.52c6.52-2.74,12-4.42,16.83-4.42,7,0,10.62,2.73,10.62,8.31v2.73a49.53,49.53,0,0,0-12.62-1.58c-14.31,0-22.93,6-22.93,16.73,0,9.78,7.78,17.24,20.19,17.24m-92.44-.94h18.09V80.92h30.29v28.82H506V36.12H487.93V64.41H457.64V36.12H439.55ZM370.62,81.87c0-8,6.31-14.1,14.62-14.1A17.22,17.22,0,0,1,397,72.09V91.54A16.36,16.36,0,0,1,385.24,96c-8.2,0-14.62-6.1-14.62-14.09m26.61,27.87h16.83V32.44l-17,3.68V57.05a28.3,28.3,0,0,0-14.2-3.68c-16.19,0-28.92,12.51-28.92,28.5a28.25,28.25,0,0,0,28.4,28.6,25.12,25.12,0,0,0,14.93-4.83ZM320,67c5.36,0,9.88,3.47,11.67,8.83H308.47C310.15,70.3,314.36,67,320,67M291.33,82c0,16.2,13.25,28.82,30.28,28.82,9.36,0,16.2-2.53,23.25-8.42l-11.26-10c-2.63,2.74-6.52,4.21-11.14,4.21a14.39,14.39,0,0,1-13.68-8.83h39.65V83.55c0-17.67-11.88-30.39-28.08-30.39a28.57,28.57,0,0,0-29,28.81M262,51.58c6,0,9.36,3.78,9.36,8.31S268,68.2,262,68.2H244.11V51.58Zm-36,58.16h18.09V82.92h13.77l13.89,26.82H292l-16.2-29.45a22.27,22.27,0,0,0,13.88-20.72c0-13.25-10.41-23.45-26-23.45H226Z" fill="#151515"/>
+        </svg>
+        <span>› Platform Engineering</span>
+      </div>
+      <div class="slide-label animate-in">—— Fleet Management · 2026</div>
+      <h1 class="animate-in">Declarative Cluster Provisioning<br><span class="accent">at Scale with GitOps</span></h1>
+      <div class="subtitle animate-in">How RHACM and OpenShift GitOps turn pull requests into production-ready OpenShift clusters — fully automated, auditable, and repeatable.</div>
+      <div class="tags animate-in">
+        <span class="tag accent">RHACM 2.16</span>
+        <span class="tag accent">GitOps 1.20</span>
+        <span class="tag">OCP 4.20</span>
+        <span class="tag">AWS</span>
+        <span class="tag">Kustomize</span>
+        <span class="tag">ApplicationSets</span>
+      </div>
+      <div class="attribution animate-in">Platform Engineering · Red Hat</div>
+    </div>
+
+    <!-- SLIDE 2: THE PROBLEM -->
+    <div class="slide slide-alt" data-notes="Common pain points from customer conversations. Manual provisioning creates a combinatorial explosion of configuration variants as fleet size grows. The average enterprise manages 10-15 clusters today and expects to manage 50+ within 2 years. Source: Red Hat Global Customer Tech Trends Report.">
+      <div class="slide-label animate-in">—— The Problem</div>
+      <h2 class="animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/alert.svg" alt=""> Manual Cluster Provisioning <span class="accent">Doesn't Scale</span></h2>
+      <ul class="feature-list animate-in">
+        <li>
+          <img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/stopwatch.svg" alt="">
+          <div><strong>Slow time-to-cluster.</strong> Weeks of tickets, approvals, and manual configuration before a team gets a working environment.</div>
+        </li>
+        <li>
+          <img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/disruption.svg" alt="">
+          <div><strong>Configuration drift.</strong> No two clusters are alike. Security patches applied inconsistently. Debugging becomes archaeology.</div>
+        </li>
+        <li>
+          <img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/padlock-unlocked.svg" alt="">
+          <div><strong>No audit trail.</strong> Who changed what, and when? Manual changes vanish into the ether — invisible to compliance audits.</div>
+        </li>
+        <li>
+          <img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/scalable.svg" alt="">
+          <div><strong>Toil compounds.</strong> Every new cluster multiplies operational burden. The team that manages 5 clusters cannot manage 50 the same way.</div>
+        </li>
+      </ul>
+      <div class="source animate-in">The challenge: infrastructure at enterprise scale demands a fundamentally different approach.</div>
+    </div>
+
+    <!-- SLIDE 3: BIG NUMBER -->
+    <div class="slide" data-notes="The insight: GitOps brings the same version control, code review, and CI/CD practices to infrastructure that revolutionized application development. RHACM provides the declarative APIs that make clusters manageable as Kubernetes resources. Together, they eliminate the manual gap.">
+      <div class="slide-label animate-in">—— The Insight</div>
+      <div style="display: flex; align-items: center; gap: 24px;" class="animate-in">
+        <img class="rh-icon xl accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/automation.svg" alt="">
+      </div>
+      <h2 class="animate-in" style="margin-top: 24px;">What If Every Cluster Was <span class="accent">a Pull Request?</span></h2>
+      <div class="body-text animate-in">A new cluster should be as simple as committing YAML to a Git repository. Argo CD syncs the desired state. RHACM provisions the infrastructure. ApplicationSets bootstrap Day 2 configuration automatically. No tickets. No manual steps. Just code review and merge.</div>
+      <div class="tags animate-in">
+        <span class="tag accent">Declarative</span>
+        <span class="tag accent">Auditable</span>
+        <span class="tag accent">Repeatable</span>
+      </div>
+    </div>
+
+    <!-- SLIDE 4: ARCHITECTURE -->
+    <div class="slide slide-alt" data-notes="For this demo we use 2 clusters: a Hub (running RHACM 2.16 + GitOps 1.20) and a Dev spoke provisioned live on AWS. The Prod overlay remains in the repo as YAML to demonstrate the base/overlay pattern without the cost of a second spoke. In production, you would provision as many spoke clusters as needed — the pattern scales linearly. RHACM's Hive operator reads ClusterDeployment CRs and talks to AWS APIs to provision infrastructure. Once a spoke is alive, RHACM installs the Klusterlet agent and ApplicationSets auto-detect it. Docs: https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16">
+      <div class="slide-label animate-in">—— Architecture</div>
+      <h2 class="animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/architecture.svg" alt=""> Hub-and-Spoke: <span class="accent">Git as the Control Plane</span></h2>
+      <div class="arch-diagram animate-in">
+        <div class="arch-row">
+          <div class="arch-box">
+            <img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/code-branch.svg" alt="">
+            <div class="arch-label">Git Repository</div>
+            <div class="arch-sub">Single Source of Truth</div>
+          </div>
+          <div class="arch-arrow">→</div>
+          <div class="arch-box highlight">
+            <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/cluster.svg" alt="">
+            <div class="arch-label">Hub Cluster</div>
+            <div class="arch-sub">RHACM 2.16 + GitOps 1.20</div>
+          </div>
+        </div>
+        <div class="arch-arrow-down">↓ Hive provisions &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; ↓ ApplicationSets target</div>
+        <div class="arch-row">
+          <div class="arch-bracket">
+            <div class="arch-bracket-label">Spoke Clusters (AWS)</div>
+            <div class="arch-group">
+              <div class="arch-box highlight">
+                <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/cloud.svg" alt="">
+                <div class="arch-label">Dev</div>
+                <div class="arch-sub">us-east-1 · Live demo</div>
+              </div>
+              <div class="arch-box" style="border-style: dashed; opacity: 0.7;">
+                <img class="rh-icon small" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/cloud.svg" alt="">
+                <div class="arch-label">Prod</div>
+                <div class="arch-sub">us-west-2 · YAML only</div>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="arch-arrow-down" style="color: var(--accent);">↑ Klusterlet reports back · Day 2 configs auto-deployed</div>
+      </div>
+      <div class="source animate-in">2 clusters for the demo: Hub + Dev spoke. Prod overlay shown as YAML to illustrate the pattern.</div>
+    </div>
+
+    <!-- SLIDE 5: PHASE 1 — HUB SETUP -->
+    <div class="slide" data-notes="The ACM-GitOps integration is the critical glue that most teams miss. Without ManagedClusterSetBinding and Placement, Argo CD cannot discover or target spoke clusters. The Placement CR uses label selectors to control which clusters Argo CD can reach — this is the security boundary. SealedSecrets (v0.36.5) handles credential encryption; in production, consider External Secrets Operator with AWS Secrets Manager. Docs: https://docs.redhat.com/en/documentation/red_hat_openshift_gitops/1.20">
+      <div class="slide-label animate-in">—— Phase 1 · Hub Setup</div>
+      <h2 class="animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/cluster.svg" alt=""> Install the Operators, <span class="accent">Wire the Integration</span></h2>
+      <div class="three-col animate-in">
+        <div class="card">
+          <h3><span class="accent">1</span> ACM Operator</h3>
+          <p>Install <code>advanced-cluster-management</code> from the <code>release-2.16</code> channel. Deploy the MultiClusterHub CR to activate Hive, Placement, and the full management stack.</p>
+        </div>
+        <div class="card">
+          <h3><span class="accent">2</span> GitOps Operator</h3>
+          <p>Install <code>openshift-gitops-operator</code> from the <code>latest</code> channel (v1.20). Configure the ArgoCD CR with ApplicationSet support, route access, and ACM resource health checks.</p>
+        </div>
+        <div class="card">
+          <h3><span class="accent">3</span> The Critical Glue</h3>
+          <p>Create the ManagedClusterSet, bind it to the GitOps namespace, and configure Placement. This lets Argo CD discover and target spoke clusters securely.</p>
+        </div>
+      </div>
+      <div class="code-block animate-in" style="margin-top: 24px;"><span class="code-comment"># The integration chain that connects ACM to Argo CD:</span>
+ManagedClusterSet → ManagedClusterSetBinding → Placement → ApplicationSet
+<span class="code-comment">#    (groups)           (binds to ns)        (selects)    (deploys to)</span></div>
+    </div>
+
+    <!-- SLIDE 6: PHASE 2 — GIT REPO STRUCTURE -->
+    <div class="slide slide-alt" data-notes="The directory structure enforces separation of concerns: hub-setup/ is applied once to bootstrap, clusters/ contains the Day 1 provisioning manifests with Kustomize base/overlays, day2-config/ has the policies and operators deployed to spoke clusters, and applicationsets/ ties it all together. The App of Apps root Application is the single entry point — apply it once, and everything flows from Git. [IMAGE OPPORTUNITY] Prompt: 'A clean isometric illustration of a Git repository tree branching into multiple cluster nodes, using Red Hat red (#ee0000), gray (#f2f2f2), and white color palette, minimal flat design, no text, 16:9 aspect ratio, light background'">
+      <div class="slide-label animate-in">—— Phase 2 · Repository Structure</div>
+      <h2 class="animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/code-branch.svg" alt=""> Kustomize Bases and Overlays <span class="accent">Separate Concerns</span></h2>
+      <div class="two-col animate-in">
+        <div class="code-block" style="font-size: 0.8rem;">
+<span class="code-key">hub-setup/</span>
+  acm-operator/
+  openshift-gitops-operator/
+  acm-gitops-integration/
+  sealed-secrets/
+
+<span class="code-key">clusters/</span>
+  <span class="code-value">base/</span>           <span class="code-comment"># Shared CRs</span>
+  <span class="code-value">overlays/dev/</span>   <span class="code-comment"># Dev patches</span>
+  <span class="code-value">overlays/prod/</span>  <span class="code-comment"># Prod patches</span></div>
+        <div class="code-block" style="font-size: 0.8rem;">
+<span class="code-key">day2-config/</span>
+  logging/          <span class="code-comment"># Logging 6.5</span>
+  network-policies/ <span class="code-comment"># Baseline rules</span>
+  rbac/             <span class="code-comment"># Roles & bindings</span>
+
+<span class="code-key">applicationsets/</span>   <span class="code-comment"># Argo CD targeting</span>
+
+<span class="code-key">app-of-apps/</span>
+  root-application.yaml <span class="code-comment"># Bootstrap</span></div>
+      </div>
+      <div class="body-text animate-in" style="margin-top: 24px;">One base. Multiple overlays. Each environment inherits and overrides. Adding a new cluster is adding a new overlay directory and merging the PR.</div>
+    </div>
+
+    <!-- SLIDE 7: PHASE 3 — DAY 1 PROVISIONING -->
+    <div class="slide" data-notes="The ClusterDeployment CR is the core resource — it tells Hive to provision infrastructure on AWS using the specified install-config. The ManagedCluster CR is what registers the cluster in ACM's inventory and — critically — carries the labels that drive Day 2 targeting. Secrets (AWS creds, pull secret, SSH key) use placeholder values in the repo and must be sealed with kubeseal or managed via External Secrets Operator. Provisioning typically takes 30-45 minutes on AWS. For live demos, pre-provision the dev cluster.">
+      <div class="slide-label animate-in">—— Phase 3 · Day 1 Provisioning</div>
+      <h2 class="animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/cloud-deploy.svg" alt=""> A Cluster Is <span class="accent">Four Custom Resources</span></h2>
+      <div class="two-col animate-in">
+        <div class="col">
+          <div class="card">
+            <h3>ClusterDeployment</h3>
+            <p>Cluster name, base domain, AWS region, ClusterImageSet (OCP 4.20), credential secret references.</p>
+          </div>
+          <div class="card">
+            <h3>MachinePool</h3>
+            <p>Worker node instance type, replica count, root volume configuration. Dev: 2x m5.xlarge. Prod: 5x m5.2xlarge with autoscaling.</p>
+          </div>
+        </div>
+        <div class="col">
+          <div class="card">
+            <h3>ManagedCluster</h3>
+            <p>Registers the cluster in ACM. Carries the labels that drive everything: <code>environment</code>, <code>region</code>, <code>pci-compliant</code>.</p>
+          </div>
+          <div class="card">
+            <h3>KlusterletAddonConfig</h3>
+            <p>Deploys management agents: application manager, policy controller, search collector, cert policy controller.</p>
+          </div>
+        </div>
+      </div>
+      <div class="source animate-in">Commit these manifests → Argo CD syncs to Hub → Hive provisions on AWS → cluster reports Ready.</div>
+    </div>
+
+    <!-- SLIDE 8: DEV VS PROD OVERLAYS -->
+    <div class="slide slide-alt" data-notes="Strategic merge patches keep the overlays readable and minimal. Each overlay only specifies what differs from the base. In this demo, we provision the Dev cluster live; the Prod overlay exists in the repo to show how the same base scales to different environments with different labels, instance sizes, and compliance requirements. The pci-compliant label gates stricter NetworkPolicy enforcement — labels are the control plane for fleet-wide policy.">
+      <div class="slide-label animate-in">—— Dev vs. Prod</div>
+      <h2 class="animate-in">Same Base, <span class="accent">Different Overlays</span></h2>
+      <div class="two-col animate-in">
+        <div class="col">
+          <h3 style="color: var(--text-primary);">Dev Cluster</h3>
+          <div class="code-block" style="font-size: 0.8rem;">
+<span class="code-key">region:</span>        <span class="code-value">us-east-1</span>
+<span class="code-key">workers:</span>       <span class="code-value">2x m5.xlarge</span>
+<span class="code-key">control:</span>       <span class="code-value">m5.2xlarge</span>
+<span class="code-key">domain:</span>        <span class="code-value">dev.example.com</span>
+
+<span class="code-comment"># Labels</span>
+<span class="code-key">environment:</span>   <span class="code-value">dev</span>
+<span class="code-key">pci-compliant:</span> <span class="code-value">false</span></div>
+        </div>
+        <div class="col">
+          <h3 style="color: var(--accent);">Prod Cluster</h3>
+          <div class="code-block" style="font-size: 0.8rem;">
+<span class="code-key">region:</span>        <span class="code-value">us-west-2</span>
+<span class="code-key">workers:</span>       <span class="code-value">5x m5.2xlarge (auto 3-8)</span>
+<span class="code-key">control:</span>       <span class="code-value">m5.4xlarge</span>
+<span class="code-key">domain:</span>        <span class="code-value">prod.example.com</span>
+
+<span class="code-comment"># Labels</span>
+<span class="code-key">environment:</span>   <span class="code-value">prod</span>
+<span class="code-key">pci-compliant:</span> <span class="code-value">true</span></div>
+        </div>
+      </div>
+      <div class="body-text animate-in" style="margin-top: 24px;"><strong>Labels are the control plane.</strong> The <code>pci-compliant: true</code> label on prod automatically triggers stricter NetworkPolicy enforcement through ApplicationSets. No manual configuration required.</div>
+    </div>
+
+    <!-- SLIDE 9: PHASE 4 — DAY 2 -->
+    <div class="slide" data-notes="The Cluster Decision Resource generator is the most powerful ApplicationSet generator for ACM environments. It reads PlacementDecision resources created by ACM's Placement controller, dynamically discovering clusters that match label selectors. When a new cluster comes online and ACM registers it, the Placement controller updates its decisions, and Argo CD automatically creates Applications for the new cluster. selfHeal: true ensures that any manual change on a spoke cluster is automatically reverted to match Git. This is a powerful live demo moment: kubectl edit something on the spoke, watch Argo CD revert it within seconds. OpenShift Logging 6.5 uses Loki + Vector (Elasticsearch is gone). Docs: https://docs.redhat.com/en/documentation/red_hat_openshift_logging/6.5">
+      <div class="slide-label animate-in">—— Phase 4 · Day 2 Configuration</div>
+      <h2 class="animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/automation.svg" alt=""> ApplicationSets Auto-Deploy <span class="accent">Based on Labels</span></h2>
+      <div class="three-col animate-in">
+        <div class="card">
+          <h3><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/data.svg" alt=""> Logging 6.5</h3>
+          <p>Loki Operator + Vector collector. Deployed to <strong>all</strong> managed clusters. 7-day application, 14-day infrastructure retention.</p>
+        </div>
+        <div class="card">
+          <h3><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/firewall-a.svg" alt=""> Network Policies</h3>
+          <p>Deny-all default, allow DNS/ingress/monitoring. Deployed only to clusters labeled <code>pci-compliant: true</code>.</p>
+        </div>
+        <div class="card">
+          <h3><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/padlock-locked.svg" alt=""> RBAC</h3>
+          <p>Developer, SRE, and cluster-admin roles. Deployed to <strong>all</strong> managed clusters. Consistent access control fleet-wide.</p>
+        </div>
+      </div>
+      <div class="code-block animate-in" style="margin-top: 24px;"><span class="code-comment"># Cluster Decision Resource generator — auto-targets clusters from ACM Placement</span>
+<span class="code-key">generators:</span>
+  - <span class="code-key">clusterDecisionResource:</span>
+      <span class="code-key">configMapRef:</span> <span class="code-value">acm-placement</span>
+      <span class="code-key">requeueAfterSeconds:</span> <span class="code-value">180</span>
+<span class="code-key">syncPolicy:</span>
+  <span class="code-key">automated:</span>
+    <span class="code-key">selfHeal:</span> <span class="code-value">true</span>    <span class="code-comment"># Drift remediation</span>
+    <span class="code-key">prune:</span> <span class="code-value">true</span>       <span class="code-comment"># Remove orphaned resources</span></div>
+    </div>
+
+    <!-- SLIDE 10: LIVE DEMO -->
+    <div class="slide slide-alt demo-slide" data-notes="Demo flow: (1) Show the Git repo structure in GitHub/GitLab. (2) Walk through a ClusterDeployment manifest and its overlay. (3) Show the Argo CD UI on the Hub — the root Application and its children. (4) Open a PR adding a new cluster overlay, merge it. (5) Watch Argo CD sync in real time. (6) Show ACM console — cluster provisioning status. (7) Once the cluster is up, show ApplicationSets auto-detecting it. (8) Demo drift remediation: kubectl edit a NetworkPolicy on the spoke, watch Argo CD revert it. Tip: pre-provision the dev cluster before the demo. AWS provisioning takes 30-45 minutes. [VIDEO OPPORTUNITY] A short screen recording of the Argo CD sync + ACM provisioning flow would be powerful here.">
+      <img class="rh-icon xl accent animate-in" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/play.svg" alt="">
+      <h1 class="animate-in" style="margin-top: 32px;">Let's See It <span class="accent">in Action</span></h1>
+      <div class="subtitle animate-in">From pull request to production-ready cluster.</div>
+    </div>
+
+    <!-- SLIDE 11: BEST PRACTICES -->
+    <div class="slide" data-notes="Secrets management is the most common stumbling block. Never commit real credentials — use SealedSecrets (v0.36.5) for simpler setups or External Secrets Operator with AWS Secrets Manager / HashiCorp Vault for production. selfHeal: true is both a best practice and a live demo highlight — any manual change is automatically reverted. CI validation catches misconfigurations before they reach the cluster: kustomize build validates template rendering, kube-linter catches security anti-patterns, yamllint enforces syntax. The label taxonomy on ManagedCluster CRs (environment, region, pci-compliant) is the fleet management control plane — design it carefully upfront.">
+      <div class="slide-label animate-in">—— Best Practices</div>
+      <h2 class="animate-in"><img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/shield.svg" alt=""> Enterprise-Grade <span class="accent">from Day One</span></h2>
+      <ul class="feature-list animate-in">
+        <li>
+          <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/key.svg" alt="">
+          <div><strong>Secrets management.</strong> SealedSecrets or External Secrets Operator with Vault / AWS Secrets Manager. Never commit credentials in plain text.</div>
+        </li>
+        <li>
+          <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/lifecycle.svg" alt="">
+          <div><strong>selfHeal: true.</strong> Argo CD automatically reverts any manual drift on managed clusters. The Git repo is always the authority.</div>
+        </li>
+        <li>
+          <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/check.svg" alt="">
+          <div><strong>Shift-left validation.</strong> CI pipelines run <code>kustomize build</code> and <code>kube-linter</code> on every PR. Catch misconfigurations before they reach any cluster.</div>
+        </li>
+        <li>
+          <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/management.svg" alt="">
+          <div><strong>Label-driven targeting.</strong> Design your ManagedCluster label taxonomy upfront. Labels control which configs reach which clusters — they are your fleet's control plane.</div>
+        </li>
+      </ul>
+    </div>
+
+    <!-- SLIDE 12: WORKFLOW SUMMARY -->
+    <div class="slide slide-alt" data-notes="This is the end-to-end flow in production. The entire cycle — from PR to running cluster with full Day 2 configuration — is fully automated after the initial Hub setup. The only human action is merging the PR. Everything else is declarative reconciliation. For Day 2 changes (adding a new policy, updating an operator version), the same flow applies: commit to Git, Argo CD syncs, all targeted clusters update automatically. [MEME OPPORTUNITY] A well-placed 'It just works' meme could lighten the mood after this dense workflow slide.">
+      <div class="slide-label animate-in">—— The Full Workflow</div>
+      <h2 class="animate-in">From Pull Request to <span class="accent">Production-Ready Cluster</span></h2>
+      <div class="workflow animate-in">
+        <div class="workflow-step">
+          <div class="step-num">1</div>
+          <div class="step-label"><strong>PR Merged</strong><br>Cluster manifests committed to Git</div>
+        </div>
+        <div class="workflow-arrow">→</div>
+        <div class="workflow-step">
+          <div class="step-num">2</div>
+          <div class="step-label"><strong>Argo CD Syncs</strong><br>Detects new manifests, applies to Hub</div>
+        </div>
+        <div class="workflow-arrow">→</div>
+        <div class="workflow-step">
+          <div class="step-num">3</div>
+          <div class="step-label"><strong>Hive Provisions</strong><br>Creates VMs and infrastructure on AWS</div>
+        </div>
+        <div class="workflow-arrow">→</div>
+        <div class="workflow-step">
+          <div class="step-num">4</div>
+          <div class="step-label"><strong>Klusterlet Connects</strong><br>Cluster registers with ACM Hub</div>
+        </div>
+        <div class="workflow-arrow">→</div>
+        <div class="workflow-step">
+          <div class="step-num">5</div>
+          <div class="step-label"><strong>Day 2 Auto-Deploys</strong><br>ApplicationSets target by labels</div>
+        </div>
+      </div>
+      <div class="quote-mark animate-in" style="margin-top: 48px;">"</div>
+      <div class="quote-text animate-in">The only human action is merging the pull request. Everything else is declarative reconciliation.</div>
+    </div>
+
+    <!-- SLIDE 13: NEXT STEPS -->
+    <div class="slide" data-notes="Getting started resources: RHACM 2.16 docs: https://docs.redhat.com/en/documentation/red_hat_advanced_cluster_management_for_kubernetes/2.16 | OpenShift GitOps 1.20 docs: https://docs.redhat.com/en/documentation/red_hat_openshift_gitops/1.20 | OCP 4.20 docs: https://docs.redhat.com/en/documentation/openshift_container_platform/4.20 | This demo repository is available as a reference implementation with all manifests, Kustomize overlays, and ApplicationSet templates ready to customize for your environment.">
+      <div class="slide-label animate-in">—— Next Steps</div>
+      <h2 class="animate-in">Get Started <span class="accent">Today</span></h2>
+      <ul class="feature-list animate-in">
+        <li>
+          <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/rocket.svg" alt="">
+          <div><strong>Clone this repository.</strong> All manifests, Kustomize overlays, and ApplicationSet templates are ready to customize for your environment.</div>
+        </li>
+        <li>
+          <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/cluster.svg" alt="">
+          <div><strong>Stand up a Hub cluster.</strong> Install RHACM 2.16 and OpenShift GitOps 1.20. Wire the integration. Apply the root Application.</div>
+        </li>
+        <li>
+          <img class="rh-icon small accent" src="https://cdn.jsdelivr.net/npm/@rhds/icons@2.1.0/standard/code-branch.svg" alt="">
+          <div><strong>Open your first PR.</strong> Add a cluster overlay, merge it, and watch the entire pipeline execute — from Git to running cluster.</div>
+        </li>
+      </ul>
+      <div class="tags animate-in" style="margin-top: 32px;">
+        <span class="tag">OCP 4.20</span>
+        <span class="tag">RHACM 2.16</span>
+        <span class="tag">GitOps 1.20</span>
+        <span class="tag">Logging 6.5</span>
+        <span class="tag">Sealed Secrets v0.36.5</span>
+      </div>
+      <div class="logo-footer animate-in">
+        <svg class="rh-logo large" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 613 145" role="img" aria-label="Red Hat">
+          <title>Red Hat</title>
+          <path d="M127.47,83.49c12.51,0,30.61-2.58,30.61-17.46a14,14,0,0,0-.31-3.42l-7.45-32.36c-1.72-7.12-3.23-10.35-15.73-16.6C124.89,8.69,103.76.5,97.51.5,91.69.5,90,8,83.06,8c-6.68,0-11.64-5.6-17.89-5.6-6,0-9.91,4.09-12.93,12.5,0,0-8.41,23.72-9.49,27.16A6.43,6.43,0,0,0,42.53,44c0,9.22,36.3,39.45,84.94,39.45M160,72.07c1.73,8.19,1.73,9.05,1.73,10.13,0,14-15.74,21.77-36.43,21.77C78.54,104,37.58,76.6,37.58,58.49a18.45,18.45,0,0,1,1.51-7.33C22.27,52,.5,55,.5,74.22c0,31.48,74.59,70.28,133.65,70.28,45.28,0,56.7-20.48,56.7-36.65,0-12.72-11-27.16-30.83-35.78" fill="#e00"/>
+          <path d="M160,72.07c1.73,8.19,1.73,9.05,1.73,10.13,0,14-15.74,21.77-36.43,21.77C78.54,104,37.58,76.6,37.58,58.49a18.45,18.45,0,0,1,1.51-7.33l3.66-9.06A6.43,6.43,0,0,0,42.53,44c0,9.22,36.3,39.45,84.94,39.45,12.51,0,30.61-2.58,30.61-17.46a14,14,0,0,0-.31-3.42Z"/>
+          <path d="M579.74,92.8c0,11.89,7.15,17.67,20.19,17.67a52.11,52.11,0,0,0,11.89-1.68V95a24.84,24.84,0,0,1-7.68,1.16c-5.37,0-7.36-1.68-7.36-6.73V68.3h15.56V54.1H596.78v-18l-17,3.68V54.1H568.49V68.3h11.25Zm-53,.32c0-3.68,3.69-5.47,9.26-5.47a43.12,43.12,0,0,1,10.1,1.26v7.15a21.51,21.51,0,0,1-10.63,2.63c-5.46,0-8.73-2.1-8.73-5.57m5.2,17.56c6,0,10.84-1.26,15.36-4.31v3.37h16.82V74.08c0-13.56-9.14-21-24.39-21-8.52,0-16.94,2-26,6.1l6.1,12.52c6.52-2.74,12-4.42,16.83-4.42,7,0,10.62,2.73,10.62,8.31v2.73a49.53,49.53,0,0,0-12.62-1.58c-14.31,0-22.93,6-22.93,16.73,0,9.78,7.78,17.24,20.19,17.24m-92.44-.94h18.09V80.92h30.29v28.82H506V36.12H487.93V64.41H457.64V36.12H439.55ZM370.62,81.87c0-8,6.31-14.1,14.62-14.1A17.22,17.22,0,0,1,397,72.09V91.54A16.36,16.36,0,0,1,385.24,96c-8.2,0-14.62-6.1-14.62-14.09m26.61,27.87h16.83V32.44l-17,3.68V57.05a28.3,28.3,0,0,0-14.2-3.68c-16.19,0-28.92,12.51-28.92,28.5a28.25,28.25,0,0,0,28.4,28.6,25.12,25.12,0,0,0,14.93-4.83ZM320,67c5.36,0,9.88,3.47,11.67,8.83H308.47C310.15,70.3,314.36,67,320,67M291.33,82c0,16.2,13.25,28.82,30.28,28.82,9.36,0,16.2-2.53,23.25-8.42l-11.26-10c-2.63,2.74-6.52,4.21-11.14,4.21a14.39,14.39,0,0,1-13.68-8.83h39.65V83.55c0-17.67-11.88-30.39-28.08-30.39a28.57,28.57,0,0,0-29,28.81M262,51.58c6,0,9.36,3.78,9.36,8.31S268,68.2,262,68.2H244.11V51.58Zm-36,58.16h18.09V82.92h13.77l13.89,26.82H292l-16.2-29.45a22.27,22.27,0,0,0,13.88-20.72c0-13.25-10.41-23.45-26-23.45H226Z" fill="#151515"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- SLIDE 14: THANK YOU -->
+    <div class="slide thank-you" data-notes="Thank you for attending. This demo repository is available for you to clone and customize. Reach out to your Red Hat account team for hands-on assistance with RHACM + GitOps implementation.">
+      <h1 class="animate-in">Thank <span class="accent">You</span></h1>
+      <div class="attribution animate-in">Christopher Bowland · Associate Principal Specialist Solution Architect · Red Hat</div>
+      <div class="logo-footer animate-in">
+        <svg class="rh-logo large" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 613 145" role="img" aria-label="Red Hat">
+          <title>Red Hat</title>
+          <path d="M127.47,83.49c12.51,0,30.61-2.58,30.61-17.46a14,14,0,0,0-.31-3.42l-7.45-32.36c-1.72-7.12-3.23-10.35-15.73-16.6C124.89,8.69,103.76.5,97.51.5,91.69.5,90,8,83.06,8c-6.68,0-11.64-5.6-17.89-5.6-6,0-9.91,4.09-12.93,12.5,0,0-8.41,23.72-9.49,27.16A6.43,6.43,0,0,0,42.53,44c0,9.22,36.3,39.45,84.94,39.45M160,72.07c1.73,8.19,1.73,9.05,1.73,10.13,0,14-15.74,21.77-36.43,21.77C78.54,104,37.58,76.6,37.58,58.49a18.45,18.45,0,0,1,1.51-7.33C22.27,52,.5,55,.5,74.22c0,31.48,74.59,70.28,133.65,70.28,45.28,0,56.7-20.48,56.7-36.65,0-12.72-11-27.16-30.83-35.78" fill="#e00"/>
+          <path d="M160,72.07c1.73,8.19,1.73,9.05,1.73,10.13,0,14-15.74,21.77-36.43,21.77C78.54,104,37.58,76.6,37.58,58.49a18.45,18.45,0,0,1,1.51-7.33l3.66-9.06A6.43,6.43,0,0,0,42.53,44c0,9.22,36.3,39.45,84.94,39.45,12.51,0,30.61-2.58,30.61-17.46a14,14,0,0,0-.31-3.42Z"/>
+          <path d="M579.74,92.8c0,11.89,7.15,17.67,20.19,17.67a52.11,52.11,0,0,0,11.89-1.68V95a24.84,24.84,0,0,1-7.68,1.16c-5.37,0-7.36-1.68-7.36-6.73V68.3h15.56V54.1H596.78v-18l-17,3.68V54.1H568.49V68.3h11.25Zm-53,.32c0-3.68,3.69-5.47,9.26-5.47a43.12,43.12,0,0,1,10.1,1.26v7.15a21.51,21.51,0,0,1-10.63,2.63c-5.46,0-8.73-2.1-8.73-5.57m5.2,17.56c6,0,10.84-1.26,15.36-4.31v3.37h16.82V74.08c0-13.56-9.14-21-24.39-21-8.52,0-16.94,2-26,6.1l6.1,12.52c6.52-2.74,12-4.42,16.83-4.42,7,0,10.62,2.73,10.62,8.31v2.73a49.53,49.53,0,0,0-12.62-1.58c-14.31,0-22.93,6-22.93,16.73,0,9.78,7.78,17.24,20.19,17.24m-92.44-.94h18.09V80.92h30.29v28.82H506V36.12H487.93V64.41H457.64V36.12H439.55ZM370.62,81.87c0-8,6.31-14.1,14.62-14.1A17.22,17.22,0,0,1,397,72.09V91.54A16.36,16.36,0,0,1,385.24,96c-8.2,0-14.62-6.1-14.62-14.09m26.61,27.87h16.83V32.44l-17,3.68V57.05a28.3,28.3,0,0,0-14.2-3.68c-16.19,0-28.92,12.51-28.92,28.5a28.25,28.25,0,0,0,28.4,28.6,25.12,25.12,0,0,0,14.93-4.83ZM320,67c5.36,0,9.88,3.47,11.67,8.83H308.47C310.15,70.3,314.36,67,320,67M291.33,82c0,16.2,13.25,28.82,30.28,28.82,9.36,0,16.2-2.53,23.25-8.42l-11.26-10c-2.63,2.74-6.52,4.21-11.14,4.21a14.39,14.39,0,0,1-13.68-8.83h39.65V83.55c0-17.67-11.88-30.39-28.08-30.39a28.57,28.57,0,0,0-29,28.81M262,51.58c6,0,9.36,3.78,9.36,8.31S268,68.2,262,68.2H244.11V51.58Zm-36,58.16h18.09V82.92h13.77l13.89,26.82H292l-16.2-29.45a22.27,22.27,0,0,0,13.88-20.72c0-13.25-10.41-23.45-26-23.45H226Z" fill="#151515"/>
+        </svg>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- CONTROLS -->
+  <div class="controls">
+    <div class="nav-hint">← → or click · N for notes</div>
+    <div class="progress"><span class="current">1</span> / <span class="total">14</span></div>
+  </div>
+
+  <!-- NOTES PANEL -->
+  <div class="notes-panel"></div>
+
+  <script>
+    (function() {
+      const slides = document.querySelectorAll('.slide');
+      const currentEl = document.querySelector('.current');
+      const totalEl = document.querySelector('.total');
+      const notesPanel = document.querySelector('.notes-panel');
+      let idx = 0;
+      let notesVisible = false;
+
+      totalEl.textContent = slides.length;
+
+      function pauseAllMedia() {
+        document.querySelectorAll('.slide:not(.active) video').forEach(v => v.pause());
+        document.querySelectorAll('.slide:not(.active) iframe').forEach(f => {
+          f.contentWindow.postMessage('{"event":"command","func":"pauseVideo","args":""}', '*');
+          f.contentWindow.postMessage('{"method":"pause"}', '*');
+        });
+      }
+
+      function playActiveMedia() {
+        document.querySelectorAll('.slide.active video').forEach(v => v.play());
+        document.querySelectorAll('.slide.active iframe').forEach(f => {
+          f.contentWindow.postMessage('{"event":"command","func":"playVideo","args":""}', '*');
+          f.contentWindow.postMessage('{"method":"play"}', '*');
+        });
+      }
+
+      function show(i) {
+        slides.forEach((s, j) => {
+          s.classList.toggle('active', j === i);
+          s.style.display = j === i ? 'flex' : 'none';
+        });
+        currentEl.textContent = i + 1;
+        pauseAllMedia();
+        playActiveMedia();
+        if (notesVisible && notesPanel) {
+          const note = slides[i].dataset.notes || '';
+          notesPanel.innerHTML = note;
+        }
+      }
+
+      function next() { if (idx < slides.length - 1) { idx++; show(idx); } }
+      function prev() { if (idx > 0) { idx--; show(idx); } }
+
+      document.addEventListener('keydown', (e) => {
+        if (e.key === 'ArrowRight' || e.key === ' ') { e.preventDefault(); next(); }
+        if (e.key === 'ArrowLeft') { prev(); }
+        if (e.key === 'n' || e.key === 'N') {
+          notesVisible = !notesVisible;
+          if (notesPanel) notesPanel.classList.toggle('visible', notesVisible);
+          show(idx);
+        }
+      });
+
+      document.addEventListener('click', (e) => {
+        if (e.target.closest('.controls') || e.target.closest('.notes-panel') || e.target.closest('.video-container') || e.target.closest('.media-container')) return;
+        const x = e.clientX / window.innerWidth;
+        x > 0.5 ? next() : prev();
+      });
+
+      let touchStartX = 0;
+      document.addEventListener('touchstart', (e) => { touchStartX = e.touches[0].clientX; });
+      document.addEventListener('touchend', (e) => {
+        const diff = e.changedTouches[0].clientX - touchStartX;
+        if (Math.abs(diff) > 50) { diff < 0 ? next() : prev(); }
+      });
+
+      show(0);
+    })();
+  </script>
+</body>
+</html>

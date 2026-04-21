@@ -1,0 +1,30 @@
+apiVersion: argoproj.io/v1alpha1
+kind: ApplicationSet
+metadata:
+  name: cluster-provisioning
+  namespace: openshift-gitops
+spec:
+  generators:
+    - git:
+        repoURL: https://github.com/YOUR_ORG/ACMClusterProvisioningWithGitOps.git
+        revision: HEAD
+        directories:
+          - path: clusters/overlays/*
+  template:
+    metadata:
+      name: '{{path.basename}}-cluster'
+    spec:
+      project: default
+      source:
+        repoURL: https://github.com/YOUR_ORG/ACMClusterProvisioningWithGitOps.git
+        targetRevision: HEAD
+        path: '{{path}}'
+      destination:
+        server: https://kubernetes.default.svc
+        namespace: '{{path.basename}}-cluster'
+      syncPolicy:
+        automated:
+          selfHeal: true
+          prune: true
+        syncOptions:
+          - CreateNamespace=true

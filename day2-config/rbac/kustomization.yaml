@@ -1,0 +1,8 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+- cluster-admin-group.yaml
+- developer-role.yaml
+- developer-rolebinding.yaml
+- sre-clusterrole.yaml
+- sre-clusterrolebinding.yaml

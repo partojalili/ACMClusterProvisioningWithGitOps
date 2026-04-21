@@ -1,0 +1,17 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: sre-operations
+rules:
+- apiGroups: [""]
+  resources: [nodes]
+  verbs: [get, list, watch, patch, update]
+- apiGroups: [""]
+  resources: [pods, pods/log, pods/exec, events, persistentvolumes, namespaces]
+  verbs: [get, list, watch]
+- apiGroups: [""]
+  resources: [pods]
+  verbs: [delete]
+- apiGroups: [""]
+  resources: [pods/exec]
+  verbs: [create]

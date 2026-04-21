@@ -1,0 +1,11 @@
+*.secret.yaml
+*.key
+.DS_Store
+kubeconfig
+install-config.yaml
+tmp/
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
