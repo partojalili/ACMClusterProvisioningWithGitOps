@@ -6,7 +6,7 @@ metadata:
 spec:
   generators:
     - git:
-        repoURL: https://github.com/YOUR_ORG/ACMClusterProvisioningWithGitOps.git
+        repoURL: https://github.com/partojalili/ACMClusterProvisioningWithGitOps.git
         revision: HEAD
         directories:
           - path: clusters/overlays/*
@@ -16,7 +16,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/YOUR_ORG/ACMClusterProvisioningWithGitOps.git
+        repoURL: https://github.com/partojalili/ACMClusterProvisioningWithGitOps.git
         targetRevision: HEAD
         path: '{{path}}'
       destination:

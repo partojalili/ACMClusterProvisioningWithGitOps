@@ -17,7 +17,7 @@ spec:
     spec:
       project: default
       source:
-        repoURL: https://github.com/YOUR_ORG/ACMClusterProvisioningWithGitOps.git
+        repoURL: https://github.com/partojalili/ACMClusterProvisioningWithGitOps.git
         targetRevision: HEAD
         path: day2-config/rbac
       destination:
