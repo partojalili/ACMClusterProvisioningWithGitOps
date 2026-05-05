@@ -104,7 +104,6 @@ patches:
               type: m5.4xlarge
         compute:
         - name: worker
-          replicas: 5
           platform:
             aws:
               type: m5.2xlarge
