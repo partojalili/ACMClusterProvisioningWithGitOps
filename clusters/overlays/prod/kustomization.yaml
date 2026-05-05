@@ -41,9 +41,6 @@ patches:
     - op: replace
       path: /spec/platform/aws/type
       value: m5.2xlarge
-    - op: replace
-      path: /spec/replicas
-      value: 5
     - op: add
       path: /spec/autoscaling
       value:
