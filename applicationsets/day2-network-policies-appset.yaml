@@ -10,7 +10,6 @@ spec:
         labelSelector:
           matchLabels:
             cluster.open-cluster-management.io/placement: gitops-placement
-            pci-compliant: "true"
         requeueAfterSeconds: 180
   template:
     metadata:
