@@ -1,0 +1,25 @@
+# 2-placement.yaml
+# Selects which managed clusters are registered to ArgoCD.
+# ACM will create the "acm-placement" ConfigMap once this exists
+# and the ManagedClusterSetBinding (step 1) is in place.
+#
+# BEFORE APPLYING: replace <YOUR_CLUSTERSET_NAME> with your actual
+# ManagedClusterSet name. Run: oc get managedclusterset
+#
+# Apply with: oc apply -f 2-placement.yaml
+# ─────────────────────────────────────────────────────────────────────────────
+apiVersion: cluster.open-cluster-management.io/v1beta1
+kind: Placement
+metadata:
+  name: acm-gitops-placement
+  namespace: openshift-gitops
+spec:
+  predicates:
+    - requiredClusterSelector:
+        labelSelector:
+          matchExpressions:
+            - key: vendor
+              operator: In
+              values:
+                - OpenShift
+  

@@ -23,7 +23,7 @@ patches:
       value: dev-cluster
     - op: replace
       path: /spec/baseDomain
-      value: dev.example.com
+      value: sandbox1993.opentlc.com
 
 # SealedSecret
 - target:
