@@ -25,6 +25,15 @@ patches:
       path: /spec/baseDomain
       value: dev.example.com
 
+# SealedSecret
+- target:
+    kind: SealedSecret
+  patch: |-
+    - op: replace
+      path: /metadata/namespace
+      value: dev-cluster	
+
+
 # MachinePool — 2 workers for dev
 - target:
     kind: MachinePool
