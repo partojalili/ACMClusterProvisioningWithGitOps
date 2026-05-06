@@ -23,7 +23,7 @@ patches:
       value: prod-cluster
     - op: replace
       path: /spec/baseDomain
-      value: prod.example.com
+      value: sandbox1993.opentlc.com
     - op: replace
       path: /spec/platform/aws/region
       value: us-west-2
@@ -101,7 +101,7 @@ patches:
         apiVersion: v1
         metadata:
           name: prod-cluster
-        baseDomain: prod.example.com
+        baseDomain: sandbox1993.opentlc.com
         controlPlane:
           name: master
           replicas: 3
