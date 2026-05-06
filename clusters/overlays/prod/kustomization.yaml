@@ -28,6 +28,15 @@ patches:
       path: /spec/platform/aws/region
       value: us-west-2
 
+# SealedSecret
+- target:
+    kind: SealedSecret
+  patch: |-
+    - op: replace
+      path: /metadata/namespace
+      value: prod-cluster		
+
+
 # MachinePool — larger instances, autoscaling
 - target:
     kind: MachinePool
