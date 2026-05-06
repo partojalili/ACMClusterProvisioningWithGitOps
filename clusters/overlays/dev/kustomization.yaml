@@ -81,7 +81,7 @@ patches:
         apiVersion: v1
         metadata:
           name: dev-cluster
-        baseDomain: dev.example.com
+        baseDomain: sandbox1993.opentlc.com
         controlPlane:
           name: master
           replicas: 3
