@@ -123,5 +123,5 @@ patches:
         platform:
           aws:
             region: us-west-2
-        pullSecret: '{"auths":{"cloud.openshift.com":{"auth":"***REMOVED***","email":"pjalili@redhat.com"},"quay.io":{"auth":"***REMOVED***","email":"pjalili@redhat.com"},"registry.connect.redhat.com":{"auth":"***REMOVED***","email":"pjalili@redhat.com"},"registry.redhat.io":{"auth":"***REMOVED***","email":"pjalili@redhat.com"}}}'
+        pullSecret: ''
         sshKey: 'ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIGcZTiqF3iAN9ktPGQfK3iv5U99nvUZU490X5ds66CD3 pjalili@pjalili-mac'
