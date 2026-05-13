@@ -9,3 +9,18 @@ tmp/
 *.swp
 *.swo
 *~
+
+# Additional security patterns
+*.pem
+*.p12
+*.pfx
+*.pkcs12
+*credentials*
+*password*
+.env
+.env.*
+*.credentials
+pull-secret.json
+ssh-privatekey
+aws-credentials.yaml
+*-unsealed.yaml
